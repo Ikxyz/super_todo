@@ -9,6 +9,13 @@ const todo = new Todo();
 export class TodoController {
 
 
+    /**
+     * Handles Creation of todo
+     * @param req Request
+     * @param res Response
+     * @param next NextFunction
+     * @returns void
+     */
     static async create(req: Request, res: Response, next: NextFunction) {
 
         const { title, author, dueAt } = req.body;
@@ -25,29 +32,30 @@ export class TodoController {
     }
 
 
-    static get(req: Request, res: Response, next: NextFunction) {
+    /**
+     * Handler fetching list of todo
+     * @param req Request
+     * @param res Response
+     * @param next NextFUnction
+     * @returns void
+     */
+    static async get(req: Request, res: Response, next: NextFunction) {
 
 
         const { id }: any = req.params;
 
-        const [err, data] = _trySync(() => todo.get(id || ""))
-
-        if (err) return next(err);
-
+        const data = await todo.get(id || "");
 
         return res.send(new SuccessResult("success", 200, data));
 
     }
 
-    static getByAuthor(req: Request, res: Response, next: NextFunction) {
+    static async getByAuthor(req: Request, res: Response, next: NextFunction) {
 
 
         const { author }: any = req.params;
 
-        const [err, data] = _trySync(function () { todo.getByAuthor(author || "") })
-
-        if (err) return next(err);
-
+        const data = await todo.getByAuthor(author || "");
 
         return res.send(new SuccessResult("success", 200, data));
 
@@ -55,14 +63,8 @@ export class TodoController {
 
 
 
-    static getAll(req: Request, res: Response, next: NextFunction) {
-
-
-        const [err, data] = _trySync(function () { todo.list() })
-
-        if (err) return next(err);
-
-
+    static async getAll(req: Request, res: Response, next: NextFunction) {
+        const data = await todo.list()
         return res.send(new SuccessResult("success", 200, data));
 
     }

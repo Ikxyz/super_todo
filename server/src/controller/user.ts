@@ -12,12 +12,11 @@ export default class UserController {
 
         const { username, password } = req.body;
 
-        const [err, user] = _trySync(() => User.login(username, password));
+        const data = await User.login(username, password).catch(next);
 
-        if (err)
-            return next(err);
-        else
-            res.status(200).send(new SuccessResult("login successful", 200, user.toJson));
+        if (!data) return;
+
+        res.status(200).send(new SuccessResult("login successful", 200, data));
     }
 
     static async on_register(req: Request, res: Response) {

@@ -1,7 +1,7 @@
 import { BadRequest, NotFound } from "../middleware/error_handler";
 import { fDb } from "../middleware/firebase";
 import { hash } from "../middleware/security";
-
+import jwt from "jsonwebtoken";
 // const userDb = new Database("user");
 
 const userColl = fDb.collection("users");
@@ -38,20 +38,34 @@ export default class User {
         this.lastName = lastName;
         this.username = username;
         this.email = email;
-        this.password = hash(password + username || "");
+        this.password = User.generatePassword(username, password);
         this.isEmailVerified = false;
         this.lastLogin = new Date().toDateString();
     }
 
-    static compare(plainPwd: string, hashedPwd: string): boolean {
-
-        return (hash(plainPwd, "sha256") === hashedPwd)
+    static generatePassword(username: string, password: string) {
+        return hash(password + username, "sha512");
     }
+
+
+    static async generateToken(data: string) {
+        return new Promise<string>((resolve, reject) => {
+            jwt.sign(data, "temp", { algorithm: "HS512" }, (err, token) => {
+                if (err) return reject(err);
+
+                if (token) resolve(token);
+            });
+        })
+
+    }
+
 
     static async getUser(username: string) {
 
         try {
+
             const docId = hash(username, 'md5');
+
 
             const user = await userColl.doc(docId).get();
 
@@ -69,14 +83,21 @@ export default class User {
     }
 
 
-
     static async login(username: string, pwd: string) {
 
-        const user = await User.getUser(username);
+        try {
+            const user = await User.getUser(username);
 
-        if (!User.compare(pwd + username, user.password)) throw new BadRequest("password is incorrect");
+            const password = User.generatePassword(user.username, pwd);
 
-        return user;
+            if (password === user.password) throw new BadRequest("password is incorrect");
+
+            const token = await User.generateToken(JSON.stringify(user));
+
+            return { token, user };
+        } catch (error) {
+            console.log(error);
+        }
     }
 
 
@@ -85,7 +106,7 @@ export default class User {
         // await userDb.create(this.username, this.toJson());
         console.log(this.toJson());
 
-        const docId = hash(this.username, 'sha256');
+        const docId = hash(this.username, "md5");
 
         await userColl.doc(docId).set(this.toJson());
 
@@ -110,18 +131,15 @@ export default class User {
 
         const user = new User("", "", "", "", "");
 
-        user.firstName = json['firstName'];
-        user.lastName = json['lastName'];
-        user.password = hash(json['password'] || "");
-        user.username = String(json['username']).toLowerCase();
-        user.email = String(json['email']).toLowerCase();
-        user.isEmailVerified = json['isEmailVerified'] ?? false;
-        user.lastLogin = json['lastLogin'] ?? "";
+        user.firstName = json.firstName;
+        user.lastName = json.lastName;
+        user.password = User.generatePassword(json.username, json.password);
+        user.username = String(json.username).toLowerCase();
+        user.email = String(json.email).toLowerCase();
+        user.isEmailVerified = json.isEmailVerified ?? false;
+        user.lastLogin = json.lastLogin ?? "";
 
         return user;
     }
 
 }
-
-
-

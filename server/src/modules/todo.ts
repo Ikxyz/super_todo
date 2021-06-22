@@ -1,9 +1,10 @@
 import Database from "./database";
+import { fDb } from '../middleware/firebase';
 
 
 
-
-const todoDb = new Database("todo");
+const todoColl = fDb.collection("todos");
+// const todoDb = new Database("todo");
 
 
 export class Todo {
@@ -24,21 +25,33 @@ export class Todo {
         return String(Date.now()).split('').sort().join("") + String(Date.now()).substring(0, 5);
     }
 
-    get(id: string) {
-        return todoDb.read(id);
+    async get(id: string) {
+        const doc = await todoColl.doc(id || "").get();
+        return doc.data();
     }
 
-    getByAuthor(author: string) {
-        return todoDb.readWhere("author", author);
+    async getByAuthor(author: string) {
+        const listOfDocs = await todoColl.where("author", "==", author).get();
+
+        if (listOfDocs.empty) return [];
+
+        return listOfDocs.docs.map((e) => e.data());
+        // return todoDb.readWhere("author", author);
     }
 
-    list() {
-        return todoDb.readAll(10);
+    async list() {
+        const listOfDoc = await todoColl.limit(10).get();
+
+        if (listOfDoc.empty) return [];
+
+        return listOfDoc.docs.map((e) => e.data());
+        // return todoDb.readAll(10);
     }
 
 
     async add() {
-        await todoDb.create(this.id, this.toJson());
+        await todoColl.doc(this.id).set(this.toJson())
+        // await todoDb.create(this.id, this.toJson());
     }
 
 
@@ -54,6 +67,3 @@ export class Todo {
 
 
 }
-
-
-
